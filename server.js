@@ -18,13 +18,14 @@ const app = express();
 
 app.set('trust proxy', 1); 
 
-
 const corsOptions = {
   origin: [
     "http://localhost:5173",
     "http://localhost:5174",
     "http://localhost:3000",
-    "https://sky-fall1.netlify.app",
+    "https://sky-fall1.netlify.app",       // admin
+    "https://first-task-dusky.vercel.app", // ✅ public frontend
+    "https://first-task-4xsodswj5-raghad-alzghouls-projects.vercel.app", // ✅ preview URL
   ],
   credentials: true,
 };
