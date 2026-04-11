@@ -1,4 +1,5 @@
 const express = require("express");
+
 const mongoose = require("mongoose");
 const dotenv = require("dotenv");
 const cors = require("cors");
@@ -15,7 +16,9 @@ dotenv.config();
 
 const app = express();
 
-// ✅ CORS must be first — before everything
+app.set('trust proxy', 1); 
+
+
 const corsOptions = {
   origin: [
     "http://localhost:5173",
