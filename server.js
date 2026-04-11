@@ -9,25 +9,27 @@ const serviceRoutes = require("./routes/serviceRoutes");
 const projectRoutes = require("./routes/projectRoutes");
 const testimonialRoutes = require("./routes/testimonialRoutes");
 const contactRoutes = require("./routes/contactRoutes");
-
-const User = require("./models/User"); // ⚠️ YOU FORGOT THIS
+const User = require("./models/User");
 
 dotenv.config();
 
 const app = express();
 
-app.use(express.json()); // ⚠️ put this BEFORE routes
-
-app.use(cors({
+// ✅ CORS must be first — before everything
+const corsOptions = {
   origin: [
     "http://localhost:5173",
-    "http://localhost:5174",  // ← add this
-    "http://localhost:3000",  // ← add this too just in case
-     "https://sky-fall1.netlify.app"
+    "http://localhost:5174",
+    "http://localhost:3000",
+    "https://sky-fall1.netlify.app",
   ],
   credentials: true,
-}));
+};
 
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions)); // ✅ handle preflight for ALL routes
+
+app.use(express.json());
 app.use("/uploads", express.static("uploads"));
 
 app.use("/api/admin/auth", adminAuthRoutes);
@@ -36,14 +38,10 @@ app.use("/api/projects", projectRoutes);
 app.use("/api/testimonials", testimonialRoutes);
 app.use("/api/contacts", contactRoutes);
 
-
-// ✅ Create admin (optional - runs once)
 const createAdmin = async () => {
   const existingAdmin = await User.findOne({ email: "admin@example.com" });
-
   if (!existingAdmin) {
     const hashedPassword = await bcrypt.hash("123456", 10);
-
     await User.create({
       name: "Admin",
       email: "admin@example.com",
@@ -51,7 +49,6 @@ const createAdmin = async () => {
       role: "admin",
       isEmailVerified: true,
     });
-
     console.log("Admin created");
   } else {
     console.log("Admin already exists");
