@@ -57,10 +57,13 @@ const createAdmin = async () => {
   }
 };
 
-mongoose.connect(process.env.MONGO_URI)
+mongoose.connect(process.env.MONGO_URI, {
+  serverSelectionTimeoutMS: 30000,
+  socketTimeoutMS: 45000,
+})
   .then(async () => {
     console.log("DB Connected");
-    await createAdmin(); // run after DB connect
+    await createAdmin();
   })
   .catch(err => console.error("DB Connection Error:", err));
 
