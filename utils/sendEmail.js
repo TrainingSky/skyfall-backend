@@ -2,22 +2,24 @@ const nodemailer = require("nodemailer");
 
 const sendEmail = async (to, subject, text) => {
   const transporter = nodemailer.createTransport({
-    service: "gmail",
+    host: "smtp.gmail.com",   // ✅ explicit host instead of service:"gmail"
+    port: 465,
+    secure: true,
+    family: 4,                // ✅ force IPv4 — fixes Render's IPv6 issue
     auth: {
       user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS
+      pass: process.env.EMAIL_PASS,
     },
-    connectionTimeout: 10000, // 10 seconds
-    greetingTimeout: 10000,
-    socketTimeout: 10000,
+    connectionTimeout: 15000,
+    greetingTimeout: 15000,
+    socketTimeout: 15000,
   });
 
-  await transporter.verify(); // ← add this, it will throw immediately if credentials are wrong
   await transporter.sendMail({
     from: process.env.EMAIL_USER,
     to,
     subject,
-    text
+    text,
   });
 };
 
