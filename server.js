@@ -23,6 +23,7 @@ app.use(cors({
     "http://localhost:5173",
     "http://localhost:5174",  // ← add this
     "http://localhost:3000",  // ← add this too just in case
+     "https://sky-fall1.netlify.app"
   ],
   credentials: true,
 }));
