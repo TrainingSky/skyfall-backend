@@ -1,7 +1,6 @@
 const Testimonial = require("../models/Testimonial");
 const cloudinaryModule = require("../config/cloudinary");
 
-// because you exported: module.exports = upload; module.exports.cloudinary = cloudinary;
 const cloudinary = cloudinaryModule.cloudinary;
 
 const createTestimonial = async (req, res) => {
@@ -37,7 +36,7 @@ const createTestimonial = async (req, res) => {
   }
 };
 
-// GET ALL
+
 const getTestimonials = async (req, res) => {
   try {
     const testimonials = await Testimonial.find();
@@ -47,7 +46,7 @@ const getTestimonials = async (req, res) => {
   }
 };
 
-// UPDATE
+
 const updateTestimonial = async (req, res) => {
   try {
     const { id } = req.params;
@@ -74,7 +73,7 @@ const updateTestimonial = async (req, res) => {
   }
 };
 
-// DELETE
+
 const deleteTestimonial = async (req, res) => {
   try {
     const testimonial = await Testimonial.findById(req.params.id);

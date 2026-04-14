@@ -23,9 +23,9 @@ const corsOptions = {
     "http://localhost:5173",
     "http://localhost:5174",
     "http://localhost:3000",
-    "https://sky-fall1.netlify.app",       // admin
-    "https://first-task-dusky.vercel.app", // ✅ public frontend
-    "https://first-task-4xsodswj5-raghad-alzghouls-projects.vercel.app", // ✅ preview URL
+    "https://sky-fall1.netlify.app",      
+    "https://first-task-dusky.vercel.app", 
+    "https://first-task-4xsodswj5-raghad-alzghouls-projects.vercel.app",
   ],
   credentials: true,
 };

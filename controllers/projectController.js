@@ -33,7 +33,7 @@ const createProject = async (req, res) => {
   }
 };
 
-// GET ALL
+
 const getProjects = async (req, res) => {
   try {
     const projects = await Project.find();
@@ -62,7 +62,7 @@ const updateProject = async (req, res) => {
   }
 };
 
-// DELETE
+
 const deleteProject = async (req, res) => {
   try {
     await Project.findByIdAndDelete(req.params.id);

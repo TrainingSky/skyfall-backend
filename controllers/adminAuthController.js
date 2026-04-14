@@ -4,7 +4,7 @@ const jwt = require("jsonwebtoken");
 const sendEmail = require("../utils/sendEmail");
 const AdminOtp = require("../models/AdminOtp");
 
-// ================= LOGIN =================
+
 const loginAdmin = async (req, res) => {
   const { email, password } = req.body;
 
@@ -46,7 +46,7 @@ const loginAdmin = async (req, res) => {
   }
 };
 
-// ================= REGISTER (email + password → sends OTP) =================
+
 const registerAdmin = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -83,7 +83,6 @@ const registerAdmin = async (req, res) => {
   }
 };
 
-// ================= VERIFY OTP → CREATE ADMIN =================
 const verifyAndCreateAdmin = async (req, res) => {
   try {
     const { email, otp } = req.body;
@@ -106,7 +105,7 @@ const verifyAndCreateAdmin = async (req, res) => {
     await User.create({
       name: "Admin",
       email,
-      password: data.password, // already hashed
+      password: data.password,
       role: "admin",
       isEmailVerified: true,
     });
@@ -120,7 +119,7 @@ const verifyAndCreateAdmin = async (req, res) => {
   }
 };
 
-// ================= FORGOT PASSWORD (sends OTP) =================
+
 const sendResetOtp = async (req, res) => {
   try {
     const { email } = req.body;
@@ -135,7 +134,7 @@ const sendResetOtp = async (req, res) => {
 
     await AdminOtp.findOneAndUpdate(
       { email },
-      { otp, expiresAt, password: user.password }, // keep existing password
+      { otp, expiresAt, password: user.password },
       { upsert: true, returnDocument: "after" }
     );
 
@@ -148,7 +147,7 @@ const sendResetOtp = async (req, res) => {
   }
 };
 
-// ================= RESET PASSWORD =================
+
 const resetPassword = async (req, res) => {
   try {
     const { email, otp, newPassword } = req.body;
@@ -180,7 +179,7 @@ const resetPassword = async (req, res) => {
   }
 };
 
-// ================= EXPORT =================
+
 module.exports = {
   loginAdmin,
   registerAdmin,

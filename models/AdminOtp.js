@@ -1,4 +1,4 @@
-// models/AdminOtp.js
+
 const mongoose = require("mongoose");
 
 const adminOtpSchema = new mongoose.Schema({
