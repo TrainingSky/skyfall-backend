@@ -14,10 +14,10 @@ const adminOnly = require("../middleware/adminMiddleware");
 
 const router = express.Router();
 
-// PUBLIC (no auth needed)
+// public
 router.get("/", getTestimonials);
 
-// ADMIN ONLY
+//admin
 router.post("/", protect, adminOnly, upload.single("avatar"), createTestimonial);
 router.put("/:id", protect, adminOnly, upload.single("avatar"), updateTestimonial);
 router.delete("/:id", protect, adminOnly, deleteTestimonial);

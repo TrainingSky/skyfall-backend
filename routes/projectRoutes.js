@@ -14,12 +14,12 @@ const adminOnly = require("../middleware/adminMiddleware");
 
 const router = express.Router();
 
-// ================= PUBLIC =================
+
 router.get("/", getProjects);
 
-// ================= ADMIN ONLY =================
+//ADMIN ONLY 
 
-// create project (with upload)
+
 router.post(
   "/create",
   protect,
@@ -40,7 +40,7 @@ router.post(
   createProject
 );
 
-// update project
+
 router.put(
   "/:id",
   protect,
@@ -49,7 +49,7 @@ router.put(
   updateProject
 );
 
-// delete project
+
 router.delete(
   "/delete/:id",
   protect,
