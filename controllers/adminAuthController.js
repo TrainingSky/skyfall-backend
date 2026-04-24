@@ -3,13 +3,52 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const sendEmail = require("../utils/sendEmail");
 const AdminOtp = require("../models/AdminOtp");
+const Joi = require("joi");
+
+/* Joi schemas*/
+
+const loginSchema = Joi.object({
+  email: Joi.string().email().required(),
+  password: Joi.string().min(8).required(),
+});
+
+const registerSchema = Joi.object({
+  email: Joi.string().email().required(),
+  password: Joi.string().min(8).required(),
+});
+
+const otpSchema = Joi.object({
+  email: Joi.string().email().required(),
+  otp: Joi.string().length(6).required(),
+});
+
+const emailSchema = Joi.object({
+  email: Joi.string().email().required(),
+});
+
+const resetSchema = Joi.object({
+  email: Joi.string().email().required(),
+  otp: Joi.string().length(6).required(),
+  newPassword: Joi.string().min(8).required(),
+});
 
 
-const loginAdmin = async (req, res) => {
+
+
+
+
+const loginAdmin = async (req, res, next) => {
+  const { error } = loginSchema.validate(req.body);
+  if (error) {
+    return res.status(400).json({ message: error.details[0].message });
+  }
+
   const { email, password } = req.body;
 
   try {
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email }).setOptions({
+      sanitizeFilter: true,
+    });
 
     if (!user || user.role !== "admin") {
       return res.status(400).json({ message: "Invalid credentials" });
@@ -40,33 +79,37 @@ const loginAdmin = async (req, res) => {
         role: user.role,
       },
     });
-
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error(error);
+    next(error);
   }
 };
 
+const registerAdmin = async (req, res, next) => {
+  const { error } = registerSchema.validate(req.body);
+  if (error) {
+    return res.status(400).json({ message: error.details[0].message });
+  }
 
-const registerAdmin = async (req, res) => {
+  const { email, password } = req.body;
+
   try {
-    const { email, password } = req.body;
+    const existing = await User.findOne({ email }).setOptions({
+      sanitizeFilter: true,
+    });
 
-    if (!email || !password) {
-      return res.status(400).json({ message: "Email and password are required" });
-    }
-
-    const existing = await User.findOne({ email });
     if (existing) {
       return res.status(400).json({ message: "Email already in use" });
     }
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const hashedOtp = await bcrypt.hash(otp, 10);
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
     const hashedPassword = await bcrypt.hash(password, 10);
 
     await AdminOtp.findOneAndUpdate(
       { email },
-      { otp, expiresAt, password: hashedPassword },
+      { otp: hashedOtp, expiresAt, password: hashedPassword },
       { upsert: true, returnDocument: "after" }
     );
 
@@ -77,17 +120,24 @@ const registerAdmin = async (req, res) => {
     );
 
     res.json({ message: "OTP sent to your email. Please verify." });
-
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error(error);
+    next(error);
   }
 };
 
-const verifyAndCreateAdmin = async (req, res) => {
-  try {
-    const { email, otp } = req.body;
+const verifyAndCreateAdmin = async (req, res, next) => {
+  const { error } = otpSchema.validate(req.body);
+  if (error) {
+    return res.status(400).json({ message: error.details[0].message });
+  }
 
-    const data = await AdminOtp.findOne({ email });
+  const { email, otp } = req.body;
+
+  try {
+    const data = await AdminOtp.findOne({ email }).setOptions({
+      sanitizeFilter: true,
+    });
 
     if (!data) {
       return res.status(400).json({ message: "Please register first" });
@@ -95,10 +145,14 @@ const verifyAndCreateAdmin = async (req, res) => {
 
     if (Date.now() > data.expiresAt) {
       await AdminOtp.deleteOne({ email });
-      return res.status(400).json({ message: "OTP expired, please register again" });
+      return res
+        .status(400)
+        .json({ message: "OTP expired, please register again" });
     }
 
-    if (data.otp !== otp) {
+    const isOtpValid = await bcrypt.compare(otp, data.otp);
+
+    if (!isOtpValid) {
       return res.status(400).json({ message: "Invalid OTP" });
     }
 
@@ -113,72 +167,99 @@ const verifyAndCreateAdmin = async (req, res) => {
     await AdminOtp.deleteOne({ email });
 
     res.json({ message: "Admin created successfully" });
-
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error(error);
+    next(error);
   }
 };
 
+const sendResetOtp = async (req, res, next) => {
+  const { error } = emailSchema.validate(req.body);
+  if (error) {
+    return res.status(400).json({ message: error.details[0].message });
+  }
 
-const sendResetOtp = async (req, res) => {
+  const { email } = req.body;
+
   try {
-    const { email } = req.body;
+    const user = await User.findOne({ email }).setOptions({
+      sanitizeFilter: true,
+    });
 
-    const user = await User.findOne({ email });
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const hashedOtp = await bcrypt.hash(otp, 10);
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
     await AdminOtp.findOneAndUpdate(
       { email },
-      { otp, expiresAt, password: user.password },
+      { otp: hashedOtp, expiresAt, password: user.password },
       { upsert: true, returnDocument: "after" }
     );
 
-    await sendEmail(email, "Password Reset OTP", `Your OTP is: ${otp}. It expires in 5 minutes.`);
+    await sendEmail(
+      email,
+      "Password Reset OTP",
+      `Your OTP is: ${otp}. It expires in 5 minutes.`
+    );
 
     res.json({ message: "Reset OTP sent" });
-
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error(error);
+    next(error);
   }
 };
 
+const resetPassword = async (req, res, next) => {
+  const { error } = resetSchema.validate(req.body);
+  if (error) {
+    return res.status(400).json({ message: error.details[0].message });
+  }
 
-const resetPassword = async (req, res) => {
+  const { email, otp, newPassword } = req.body;
+
   try {
-    const { email, otp, newPassword } = req.body;
-
-    const data = await AdminOtp.findOne({ email });
+    const data = await AdminOtp.findOne({ email }).setOptions({
+      sanitizeFilter: true,
+    });
 
     if (!data) {
-      return res.status(400).json({ message: "Please request an OTP first" });
+      return res
+        .status(400)
+        .json({ message: "Please request an OTP first" });
     }
 
     if (Date.now() > data.expiresAt) {
       await AdminOtp.deleteOne({ email });
-      return res.status(400).json({ message: "OTP expired, please try again" });
+      return res
+        .status(400)
+        .json({ message: "OTP expired, please try again" });
     }
 
-    if (data.otp !== otp) {
+    const isOtpValid = await bcrypt.compare(otp, data.otp);
+
+    if (!isOtpValid) {
       return res.status(400).json({ message: "Invalid OTP" });
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-    await User.findOneAndUpdate({ email }, { password: hashedPassword });
+    await User.findOneAndUpdate(
+      { email },
+      { password: hashedPassword }
+    );
+
     await AdminOtp.deleteOne({ email });
 
     res.json({ message: "Password updated successfully" });
-
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error(error);
+    next(error);
   }
 };
-
 
 module.exports = {
   loginAdmin,

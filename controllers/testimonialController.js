@@ -1,18 +1,41 @@
+const mongoose = require("mongoose");
+const Joi = require("joi");
 const Testimonial = require("../models/Testimonial");
 const cloudinaryModule = require("../config/cloudinary");
 
 const cloudinary = cloudinaryModule.cloudinary;
 
-const createTestimonial = async (req, res) => {
+/* Joi schemas */
+
+const createTestimonialSchema = Joi.object({
+  heading: Joi.string().trim().min(2).max(150).required(),
+  body: Joi.string().trim().min(5).max(2000).required(),
+  name: Joi.string().trim().min(2).max(100).required(),
+  role: Joi.string().trim().min(2).max(100).required(),
+  initials: Joi.string().trim().max(10).allow("", null),
+  url: Joi.string().uri().required(),
+});
+
+const updateTestimonialSchema = Joi.object({
+  heading: Joi.string().trim().min(2).max(150),
+  body: Joi.string().trim().min(5).max(2000),
+  name: Joi.string().trim().min(2).max(100),
+  role: Joi.string().trim().min(2).max(100),
+  initials: Joi.string().trim().max(10).allow("", null),
+  url: Joi.string().uri(),
+}).min(1);
+
+const createTestimonial = async (req, res, next) => {
+  const { error } = createTestimonialSchema.validate(req.body);
+  if (error) {
+    return res.status(400).json({ message: error.details[0].message });
+  }
+
   try {
     const { heading, body, name, role, initials, url } = req.body;
 
     if (!req.file) {
-      return res.status(400).json({ error: "Avatar image is required" });
-    }
-
-    if (!heading || !body || !name || !role  || !url) {
-      return res.status(400).json({ error: "All fields are required" });
+      return res.status(400).json({ message: "Avatar image is required" });
     }
 
     const avatar = {
@@ -32,30 +55,58 @@ const createTestimonial = async (req, res) => {
 
     res.status(201).json(testimonial);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    next(err);
   }
 };
 
-
-const getTestimonials = async (req, res) => {
+const getTestimonials = async (req, res, next) => {
   try {
-    const testimonials = await Testimonial.find();
+    const testimonials = await Testimonial.find().setOptions({
+      sanitizeFilter: true,
+    });
+
     res.json(testimonials);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    next(err);
   }
 };
 
+const updateTestimonial = async (req, res, next) => {
+  const { id } = req.params;
 
-const updateTestimonial = async (req, res) => {
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({ message: "Invalid testimonial id" });
+  }
+
+  const { error } = updateTestimonialSchema.validate(req.body);
+  if (error) {
+    return res.status(400).json({ message: error.details[0].message });
+  }
+
   try {
-    const { id } = req.params;
-    const updatedData = { ...req.body };
+    const { heading, body, name, role, initials, url } = req.body;
+
+    const updatedData = {};
+
+    if (heading !== undefined) updatedData.heading = heading;
+    if (body !== undefined) updatedData.body = body;
+    if (name !== undefined) updatedData.name = name;
+    if (role !== undefined) updatedData.role = role;
+    if (initials !== undefined) updatedData.initials = initials;
+    if (url !== undefined) updatedData.url = url;
 
     if (req.file) {
-      const existing = await Testimonial.findById(id);
+      const existing = await Testimonial.findById(id).setOptions({
+        sanitizeFilter: true,
+      });
 
-      if (existing?.avatar?.public_id) {
+      if (!existing) {
+        return res.status(404).json({ message: "Testimonial not found" });
+      }
+
+      if (existing.avatar?.public_id) {
         await cloudinary.uploader.destroy(existing.avatar.public_id);
       }
 
@@ -65,28 +116,52 @@ const updateTestimonial = async (req, res) => {
       };
     }
 
-    const testimonial = await Testimonial.findByIdAndUpdate(id, updatedData, { new: true });
+    const testimonial = await Testimonial.findByIdAndUpdate(id, updatedData, {
+      new: true,
+      runValidators: true,
+    }).setOptions({
+      sanitizeFilter: true,
+    });
+
+    if (!testimonial) {
+      return res.status(404).json({ message: "Testimonial not found" });
+    }
 
     res.json(testimonial);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    next(err);
   }
 };
 
+const deleteTestimonial = async (req, res, next) => {
+  const { id } = req.params;
 
-const deleteTestimonial = async (req, res) => {
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({ message: "Invalid testimonial id" });
+  }
+
   try {
-    const testimonial = await Testimonial.findById(req.params.id);
+    const testimonial = await Testimonial.findById(id).setOptions({
+      sanitizeFilter: true,
+    });
 
-    if (testimonial?.avatar?.public_id) {
+    if (!testimonial) {
+      return res.status(404).json({ message: "Testimonial not found" });
+    }
+
+    if (testimonial.avatar?.public_id) {
       await cloudinary.uploader.destroy(testimonial.avatar.public_id);
     }
 
-    await Testimonial.findByIdAndDelete(req.params.id);
+    await Testimonial.findByIdAndDelete(id).setOptions({
+      sanitizeFilter: true,
+    });
 
     res.json({ message: "Deleted successfully" });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    next(err);
   }
 };
 
@@ -94,5 +169,5 @@ module.exports = {
   createTestimonial,
   getTestimonials,
   updateTestimonial,
-  deleteTestimonial
+  deleteTestimonial,
 };

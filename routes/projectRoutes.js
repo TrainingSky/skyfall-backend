@@ -45,10 +45,21 @@ router.put(
   "/:id",
   protect,
   adminOnly,
-  upload.array("images", 4),
+  (req, res, next) => {
+    upload.array("images", 4)(req, res, function (err) {
+      if (err) {
+        console.error("UPLOAD ERROR:", err);
+
+        return res.status(500).json({
+          message: "Upload failed",
+          error: err.message || err,
+        });
+      }
+      next();
+    });
+  },
   updateProject
 );
-
 
 router.delete(
   "/delete/:id",
